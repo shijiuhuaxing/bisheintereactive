@@ -1,0 +1,27 @@
+# Backend dependencies
+
+# Web framework
+Flask==3.0.0
+flask-cors==4.0.0
+python-dotenv>=1.0.1
+opencv-python-headless>=4.13.0.92
+onnxruntime>=1.24.0
+transformers<4.42
+librosa>=0.11.0
+soundfile>=0.13.1
+
+# DashScope SDK
+dashscope>=1.17.0
+
+# Deep learning runtime
+torch>=2.2.0
+
+# Optional Qwen3-ASR toolkit
+# qwen3-asr-toolkit>=1.0.0
+
+# Optional extra dependencies
+# requests>=2.31.0
+# numpy>=1.24.0
+# scipy>=1.10.0
+
+

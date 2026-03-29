@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>情智兼备的虚拟陪伴系统 - DEMO</title>
+    <link rel="stylesheet" href="static/css/styles.css">
+</head>
+<body>
+    <div class="page-illustration illustration-left"></div>
+    <div class="page-illustration illustration-right"></div>
+
+    <div class="app-shell">
+        <header class="hero-panel">
+            <div class="hero-copy">
+                <p class="hero-kicker">北欧手绘陪伴交互演示</p>
+                <h1>情智兼备的虚拟陪伴生成系统</h1>
+                <p class="subtitle">像一本温柔的绘本那样，让识别、交流和回应自然发生。你可以先在交互模块里录音或打开摄像头，再到回应模块里查看虚拟形象、情绪变化与陪伴式回答。</p>
+
+                <div class="hero-tags">
+                    <span class="hero-tag">实时表情识别</span>
+                    <span class="hero-tag">语音情绪分析</span>
+                    <span class="hero-tag">情感语音生成</span>
+                </div>
+            </div>
+
+            <div class="hero-status-board">
+                <div class="stat-pill">
+                    <span class="stat-label">当前模式</span>
+                    <span class="stat-value">多模态陪伴交互</span>
+                </div>
+                <div class="stat-pill">
+                    <span class="stat-label">识别通道</span>
+                    <span class="stat-value">文本 / 语音 / 表情</span>
+                </div>
+                <div class="stat-pill accent">
+                    <span class="stat-label">系统状态</span>
+                    <span class="stat-value" id="systemStatus">系统就绪</span>
+                </div>
+            </div>
+        </header>
+
+        <main class="main-content">
+            <section class="module-card interaction-module">
+                <div class="module-banner">
+                    <span class="module-no">01</span>
+                    <div>
+                        <h2>交互模块</h2>
+                        <p>先在这里完成录音和摄像头采样。这个区域负责采集用户输入，是整套系统的起点。</p>
+                    </div>
+                </div>
+
+                <div class="module-layout interaction-layout">
+                    <div class="module-column interaction-main-column">
+                        <div class="sketch-card intro-card">
+                            <label>使用步骤</label>
+                            <div class="step-list">
+                                <div class="step-item"><span>1</span><p>点击录音按钮，说出你现在的状态。</p></div>
+                                <div class="step-item"><span>2</span><p>如需实时表情识别，可开启摄像头采样。</p></div>
+                                <div class="step-item"><span>3</span><p>系统会自动完成识别、融合与陪伴回应。</p></div>
+                            </div>
+                        </div>
+
+                        <div class="sketch-card recording-card">
+                            <label>语音输入</label>
+                            <div class="recording-controls">
+                                <button class="record-btn" id="recordBtn">
+                                    <span class="record-ring"></span>
+                                    <span class="record-icon">🎤</span>
+                                    <span class="record-text">点击开始录音</span>
+                                </button>
+
+                                <div class="recording-status" id="recordingStatus">
+                                    <div class="wave-animation" id="waveAnimation" style="display: none;">
+                                        <span></span><span></span><span></span><span></span><span></span>
+                                    </div>
+                                    <span class="status-text" id="statusText">准备就绪</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="sketch-card transcription-box">
+                            <label>语音识别结果</label>
+                            <div class="transcription-content" id="transcriptionContent">
+                                <span class="placeholder">等待语音输入...</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="module-column interaction-side-column">
+                        <div class="sketch-card camera-panel">
+                            <div class="camera-header">
+                                <label>摄像头采样</label>
+                                <span class="camera-status" id="cameraStatus">待启用</span>
+                            </div>
+                            <div class="camera-controls">
+                                <button class="camera-btn" id="faceMonitorBtn">开启实时表情识别</button>
+                            </div>
+                            <div class="camera-preview-shell">
+                                <video id="cameraPreview" class="camera-preview" autoplay playsinline muted></video>
+                                <div class="camera-placeholder" id="cameraPlaceholder">启用后将持续采样人脸帧，帮助系统理解你的表情变化。</div>
+                                <canvas id="frameCanvas" class="frame-canvas"></canvas>
+                            </div>
+                            <div class="camera-emotion-result" id="cameraEmotionResult">
+                                <article class="fusion-card pending">
+                                    <span class="fusion-source">表情</span>
+                                    <strong>等待采样</strong>
+                                    <p>启用实时表情识别后，会在这里同步显示表情分析结果。</p>
+                                </article>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section class="module-card response-module">
+                <div class="module-banner response-banner">
+                    <span class="module-no">02</span>
+                    <div>
+                        <h2>回应模块</h2>
+                        <p>这里展示虚拟形象、当前情绪、融合结果和最终回应。看完交互结果后，自然就会来到这个区域。</p>
+                    </div>
+                </div>
+
+                <div class="module-layout response-layout">
+                    <div class="module-column response-visual-column">
+                        <div class="avatar-stage sketch-card">
+                            <div class="avatar-aura aura-one"></div>
+                            <div class="avatar-aura aura-two"></div>
+                            <div class="avatar-placeholder calm" id="avatarDisplay">
+                                <div class="avatar-face">
+                                    <div class="eye left-eye"></div>
+                                    <div class="eye right-eye"></div>
+                                    <div class="mouth"></div>
+                                </div>
+                                <p class="avatar-label">虚拟陪伴形象</p>
+                            </div>
+                        </div>
+
+                        <div class="emotion-indicator sketch-card" id="emotionIndicator">
+                            <span class="emotion-label">当前情绪</span>
+                            <span class="emotion-value" id="emotionValue">等待中...</span>
+                        </div>
+                    </div>
+
+                    <div class="module-column response-info-column">
+                        <div class="sketch-card response-box">
+                            <label>陪伴式回应</label>
+                            <div class="response-content" id="responseContent">
+                                <span class="placeholder">等待您的语音输入...</span>
+                            </div>
+                            <div class="response-controls">
+                                <button class="play-btn" id="playBtn" disabled>
+                                    <span>🔊</span> 播放语音
+                                </button>
+                                <button class="copy-btn" id="copyBtn" disabled>
+                                    <span>📋</span> 复制文本
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="analysis-grid">
+                            <div class="sketch-card emotion-analysis">
+                                <label>情绪标签</label>
+                                <div class="emotion-tags" id="emotionTags">
+                                    <span class="tag placeholder">等待分析...</span>
+                                </div>
+                            </div>
+
+                            <div class="sketch-card fusion-insight">
+                                <label>情感识别模块</label>
+                                <div class="fusion-grid" id="fusionGrid">
+                                    <article class="fusion-card pending">
+                                        <span class="fusion-source">文本</span>
+                                        <strong>等待分析</strong>
+                                        <p>尚未产生文本情绪结果。</p>
+                                    </article>
+                                    <article class="fusion-card pending">
+                                        <span class="fusion-source">语音</span>
+                                        <strong>等待分析</strong>
+                                        <p>尚未产生语音情绪结果。</p>
+                                    </article>
+                                    <article class="fusion-card pending">
+                                        <span class="fusion-source">表情</span>
+                                        <strong>等待分析</strong>
+                                        <p>等待摄像头实时表情结果。</p>
+                                    </article>
+                                    <article class="fusion-card focus pending">
+                                        <span class="fusion-source">融合</span>
+                                        <strong>等待分析</strong>
+                                        <p>等待多模态融合结果。</p>
+                                    </article>
+                                </div>
+                                <div class="fusion-meta" id="fusionMeta">
+                                    <span>融合策略：待触发</span>
+                                    <span>时延：-- ms</span>
+                                    <span>ASR 来源：--</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <footer class="footer">
+            <div class="info-item">
+                <span class="info-label">运行状态</span>
+                <span class="info-value">前端演示界面已加载</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">接口连接</span>
+                <span class="info-value" id="apiStatus">检测中...</span>
+            </div>
+        </footer>
+    </div>
+
+    <script src="static/js/api.js"></script>
+    <script src="static/js/recorder.js"></script>
+    <script src="static/js/ui.js"></script>
+    <script src="static/js/avatar.js"></script>
+    <script src="static/js/app.js"></script>
+</body>
+</html>
