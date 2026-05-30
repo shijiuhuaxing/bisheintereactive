@@ -117,7 +117,17 @@ scripts\run_backend.bat
 .venv311\Scripts\python.exe backend_example.py
 ```
 
-### 4. 启动前端
+### 4. 启动实时会话服务
+
+如果需要启用 WebSocket 实时会话链路，另开一个终端运行：
+
+```bat
+scripts\run_realtime.bat
+```
+
+实时服务默认监听：`ws://127.0.0.1:8001/ws/realtime`。如果该服务未启动，前端会自动回退到 HTTP 回合式接口。
+
+### 5. 启动前端
 
 推荐直接运行：
 
@@ -125,17 +135,17 @@ scripts\run_backend.bat
 scripts\run_frontend.bat
 ```
 
-或手动执行：
+前端脚本会使用自定义静态服务，以正确返回 `.mjs` 和 `.glb` 等 3D 资源的 MIME 类型。若需要手动启动，可执行：
 
 ```bash
-cd frontend
-python -m http.server 8000
+python scripts/frontend_server.py
 ```
 
-### 5. 打开页面
+### 6. 打开页面
 
 - 前端：`http://127.0.0.1:8000`
 - 后端健康检查：`http://127.0.0.1:5000/api/health`
+- 实时服务健康检查：`http://127.0.0.1:8001/health`
 
 ## 使用说明
 

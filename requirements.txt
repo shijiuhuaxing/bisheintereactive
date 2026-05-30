@@ -3,6 +3,9 @@
 # Web framework
 Flask==3.0.0
 flask-cors==4.0.0
+fastapi>=0.115.0
+uvicorn[standard]>=0.30.0
+websockets>=12.0
 python-dotenv>=1.0.1
 opencv-python-headless>=4.13.0.92
 onnxruntime>=1.24.0

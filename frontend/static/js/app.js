@@ -25,6 +25,10 @@ class VirtualCompanionDemo {
         this.faceSmoothingWindow = 4;
         this.currentTtsAudioUrl = '';
         this.pendingTtsPromise = null;
+        this.useRealtimeSession = window.APP_CONFIG?.ENABLE_REALTIME_SESSION !== false;
+        this.realtimeClient = null;
+        this.activeRealtimeTurnId = '';
+        this.realtimeTurnState = {};
         this.init();
     }
 
@@ -33,7 +37,33 @@ class VirtualCompanionDemo {
         this.updateSystemStatus('系统就绪');
         this.updateCameraStatus('待启用');
         this.updateCameraEmotionResult(null);
+        window.AvatarModule?.init?.();
         this.checkAPIStatus();
+        this.initializeRealtimeSession();
+    }
+
+    initializeRealtimeSession() {
+        if (!this.useRealtimeSession || typeof window.RealtimeClient !== 'function') {
+            return;
+        }
+
+        this.realtimeClient = new window.RealtimeClient({
+            url: window.APP_CONFIG.REALTIME_WS_URL,
+            onEvent: (event) => this.handleRealtimeEvent(event),
+            onStatus: (status) => this.handleRealtimeStatus(status)
+        });
+
+        this.realtimeClient.connect().then((connected) => {
+            this.updateSystemStatus(connected ? '实时链路已连接' : '实时链路未连接，将使用 HTTP 兜底');
+        });
+    }
+
+    handleRealtimeStatus(status) {
+        if (status === 'close') {
+            this.updateSystemStatus('实时链路已断开，将使用 HTTP 兜底');
+        } else if (status === 'open') {
+            this.updateSystemStatus('实时链路已连接');
+        }
     }
 
     setupEventListeners() {
@@ -525,6 +555,13 @@ class VirtualCompanionDemo {
 
         const requestBlob = audioBlob || this.createMockAudioBlob();
 
+        if (this.useRealtimeSession && this.realtimeClient) {
+            const realtimeStarted = await this.tryProcessAudioWithRealtime(requestBlob, frameBlob);
+            if (realtimeStarted) {
+                return;
+            }
+        }
+
         try {
             this.updateStatus('正在识别语音...', 'processing');
             this.updateSystemStatus('正在调用后端接口');
@@ -564,6 +601,109 @@ class VirtualCompanionDemo {
             this.updateStatus('接口失败，切换演示模式', 'idle');
             this.updateSystemStatus('后端调用失败，已切换为本地演示');
             this.simulateProcessing();
+        }
+    }
+
+    async tryProcessAudioWithRealtime(audioBlob, frameBlob = null) {
+        try {
+            this.updateStatus('正在通过实时链路处理...', 'processing');
+            this.updateSystemStatus('正在发送音频到 WebSocket 实时会话');
+            const mimeType = audioBlob.type || 'audio/webm';
+            const turnId = await this.realtimeClient.sendAudioTurn({
+                audioBlob,
+                frameBlob,
+                audioFormat: APIIntegration.getAudioExtension(mimeType)
+            });
+            this.activeRealtimeTurnId = turnId;
+            this.realtimeTurnState[turnId] = {
+                text: '',
+                emotion: null,
+                dialogue: null,
+                ttsReady: false
+            };
+            document.getElementById('playBtn').disabled = true;
+            document.getElementById('copyBtn').disabled = true;
+            return true;
+        } catch (error) {
+            console.warn('实时链路不可用，回退 HTTP:', error);
+            this.updateSystemStatus('实时链路不可用，已回退 HTTP 接口');
+            return false;
+        }
+    }
+
+    handleRealtimeEvent(event) {
+        if (event.type === 'session.ready') {
+            this.updateSystemStatus('实时会话已就绪');
+            return;
+        }
+
+        const turnId = event.turn_id || this.activeRealtimeTurnId;
+        if (!turnId) {
+            return;
+        }
+        const state = this.realtimeTurnState[turnId] || { text: '', emotion: null, dialogue: null, ttsReady: false };
+        this.realtimeTurnState[turnId] = state;
+
+        switch (event.type) {
+            case 'turn.started':
+                this.updateStatus('实时链路处理中...', 'processing');
+                this.updateSystemStatus('实时回合已开始');
+                break;
+            case 'asr.final':
+                state.text = event.text || '未识别到有效文本';
+                this.displayTranscription(state.text);
+                this.updateSystemStatus('语音识别完成，正在融合情绪');
+                break;
+            case 'face.update':
+                this.latestFaceEmotion = event.face;
+                this.updateCameraEmotionResult(event.face);
+                break;
+            case 'emotion.update':
+                state.emotion = event.emotion || { emotion: '平静', confidence: 0.5, tags: ['平静'] };
+                this.currentEmotionData = state.emotion;
+                this.displayEmotionAnalysis(state.emotion);
+                this.renderFusionInsights(event.modalities || this.buildFallbackModalities(state.emotion), event.meta || {});
+                this.updateAvatarEmotion(state.emotion.emotion);
+                this.updateSystemStatus('情绪融合完成，正在生成回应');
+                break;
+            case 'response.text':
+                state.dialogue = event.dialogue || { response: event.text || '', tts_emotion: state.emotion?.emotion || '平静' };
+                this.currentDialogueResult = state.dialogue;
+                this.currentResponseText = state.dialogue.response || event.text || '';
+                this.currentTtsAudioUrl = '';
+                this.pendingTtsPromise = null;
+                this.displayResponse(this.currentResponseText);
+                document.getElementById('playBtn').disabled = false;
+                document.getElementById('copyBtn').disabled = false;
+                this.updateSystemStatus('回应文本已生成，正在准备语音');
+                break;
+            case 'tts.ready':
+                state.ttsReady = true;
+                this.currentTtsAudioUrl = event.audio_url || event.tts?.audio_url || '';
+                this.pendingTtsPromise = Promise.resolve(this.currentTtsAudioUrl);
+                document.getElementById('playBtn').disabled = false;
+                document.getElementById('copyBtn').disabled = false;
+                this.updateSystemStatus(this.currentTtsAudioUrl ? '文本与语音均已准备' : '文本已生成，语音将使用浏览器兜底');
+                break;
+            case 'turn.done':
+                if (state.text && this.currentResponseText && state.emotion) {
+                    this.appendConversationTurn(state.text, this.currentResponseText, state.emotion.emotion);
+                }
+                if (!state.ttsReady) {
+                    document.getElementById('playBtn').disabled = false;
+                    document.getElementById('copyBtn').disabled = false;
+                }
+                this.updateStatus('处理完成', 'idle');
+                this.updateSystemStatus('实时回合处理完成');
+                break;
+            case 'error':
+                document.getElementById('playBtn').disabled = false;
+                document.getElementById('copyBtn').disabled = false;
+                this.updateStatus('实时链路出错', 'idle');
+                this.updateSystemStatus(event.message || '实时链路处理失败');
+                break;
+            default:
+                break;
         }
     }
 
@@ -737,7 +877,14 @@ class VirtualCompanionDemo {
         }
 
         const orderedKeys = ['text', 'speech', 'face', 'fusion'];
-        fusionGrid.innerHTML = orderedKeys.map((key) => this.buildFusionCard(key, modalities[key] || null)).join('');
+        const fusionDetails = modalities.fusion?.details || {};
+        const enrichedModalities = { ...modalities };
+        ['text', 'speech', 'face'].forEach((source) => {
+            if (enrichedModalities[source] && fusionDetails[source]) {
+                enrichedModalities[source] = { ...enrichedModalities[source], details: fusionDetails[source] };
+            }
+        });
+        fusionGrid.innerHTML = orderedKeys.map((key) => this.buildFusionCard(key, enrichedModalities[key] || null)).join('');
 
         if (modalities.face) {
             this.updateCameraEmotionResult(modalities.face);
@@ -775,11 +922,20 @@ class VirtualCompanionDemo {
 
         if (key === 'fusion') {
             const topCandidates = (data.top_candidates || []).map((item) => `<span class="fusion-chip">${item.emotion} ${Math.round(item.score * 100)}%</span>`).join('');
+            const weights = data.modality_weights
+                ? Object.entries(data.modality_weights).map(([source, value]) => `${this.getSourceLabel(source)}权重 ${Math.round(value * 100)}%`).join(' / ')
+                : '';
+            const temporal = data.temporal_prior
+                ? this.getTopRawScores(data.temporal_prior).slice(0, 2).join(' / ')
+                : '';
             return `
                 <article class="fusion-card focus">
                     <span class="fusion-source">${titleMap[key]}</span>
                     <strong>${data.emotion} (${Math.round((data.confidence || 0) * 100)}%)</strong>
-                    <p>一致性增强 + 可靠度加权的决策级融合结果。</p>
+                    <p>不确定性感知时序自适应融合结果。</p>
+                    ${weights ? `<p>${weights}</p>` : ''}
+                    ${temporal ? `<p>时序先验：${temporal}</p>` : ''}
+                    <p>一致性奖励 ${Math.round((data.agreement_bonus || 0) * 100)}% / 冲突惩罚 ${Math.round((data.conflict_penalty || 0) * 100)}%</p>
                     <div class="fusion-chip-row">${topCandidates || '<span class="fusion-chip">等待候选</span>'}</div>
                 </article>
             `;
@@ -787,7 +943,11 @@ class VirtualCompanionDemo {
 
         const statusText = data.available === false ? '待接入' : `${data.emotion} (${Math.round((data.confidence || 0) * 100)}%)`;
         const evidence = (data.evidence || []).slice(0, 2).map((item) => `<span class="fusion-chip">${item}</span>`).join('');
+        const detail = data.details || data;
         const reliabilityText = data.available === false ? '可靠度 0%' : `可靠度 ${Math.round((data.reliability || 0) * 100)}%`;
+        const qualityText = detail.quality !== undefined ? `质量 ${Math.round(detail.quality * 100)}%` : '';
+        const uncertaintyText = detail.uncertainty !== undefined ? `不确定性 ${Math.round(detail.uncertainty * 100)}%` : '';
+        const weightText = detail.weight !== undefined ? `动态权重 ${Math.round(detail.weight * 100)}%` : '';
         const rawTop = this.getTopRawScores(data.raw_scores);
         const rawText = rawTop.length > 0 ? `原始输出：${rawTop.join(' / ')}` : '';
 
@@ -796,10 +956,19 @@ class VirtualCompanionDemo {
                 <span class="fusion-source">${titleMap[key]}</span>
                 <strong>${statusText}</strong>
                 <p>${reliabilityText}</p>
+                ${qualityText || uncertaintyText || weightText ? `<p>${[qualityText, uncertaintyText, weightText].filter(Boolean).join(' / ')}</p>` : ''}
                 ${rawText ? `<p>${rawText}</p>` : ''}
                 <div class="fusion-chip-row">${evidence || '<span class="fusion-chip">暂无证据</span>'}</div>
             </article>
         `;
+    }
+
+    getSourceLabel(source) {
+        return {
+            text: '文本',
+            speech: '语音',
+            face: '表情'
+        }[source] || source;
     }
 
     getTopRawScores(rawScores) {
@@ -1014,6 +1183,7 @@ class VirtualCompanionDemo {
         setTimeout(() => {
             avatarDisplay.style.animation = 'bounce 0.5s ease';
         }, 10);
+        window.AvatarModule?.setEmotion?.(emotion);
     }
 
     playResponse() {
@@ -1046,6 +1216,7 @@ class VirtualCompanionDemo {
                 }
 
                 const audio = new Audio(audioUrl);
+                window.AvatarModule?.attachAudioElement?.(audio);
                 audio.addEventListener('ended', finishPlayback, { once: true });
                 audio.addEventListener('error', () => {
                     this.handleTtsFailure(playBtn, originalText, '语音播放失败，请重试');
@@ -1068,6 +1239,9 @@ class VirtualCompanionDemo {
         utterance.lang = 'zh-CN';
         utterance.rate = 1;
         utterance.pitch = 1;
+        utterance.onstart = () => window.AvatarModule?.startSpeaking?.();
+        utterance.onend = () => window.AvatarModule?.stopSpeaking?.();
+        utterance.onerror = () => window.AvatarModule?.stopSpeaking?.();
         window.speechSynthesis.cancel();
         window.speechSynthesis.speak(utterance);
     }
@@ -1088,6 +1262,9 @@ class VirtualCompanionDemo {
         this.updateSystemStatus(reason);
         playBtn.innerHTML = originalText;
         playBtn.disabled = false;
+        if (this.currentResponseText) {
+            this.speakWithBrowser(this.currentResponseText);
+        }
     }
 
     updateCameraEmotionResult(faceEmotion) {

@@ -3,10 +3,22 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <title>情智兼备的虚拟陪伴系统 - DEMO</title>
-    <link rel="stylesheet" href="static/css/styles.css">
+        <meta name="apple-mobile-web-app-capable" content="yes">
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+        <title>情智兼备的虚拟陪伴系统</title>
+        <link rel="stylesheet" href="static/css/styles.css">
+        <link rel="modulepreload" href="static/vendor/talkinghead/modules/talkinghead.mjs">
+        <link rel="modulepreload" href="static/vendor/talkinghead/modules/retargeter.mjs">
+        <link rel="modulepreload" href="static/vendor/talkinghead/modules/dynamicbones.mjs">
+        <link rel="preload" href="static/assets/avatars/brunette.glb" as="fetch" type="model/gltf-binary" crossorigin>
+        <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.170.0/build/three.module.js",
+                "three/addons/": "https://unpkg.com/three@0.170.0/examples/jsm/"
+            }
+        }
+        </script>
 </head>
 <body>
     <div class="page-illustration illustration-left"></div>
@@ -15,7 +27,7 @@
     <div class="app-shell">
         <header class="hero-panel">
             <div class="hero-copy">
-                <p class="hero-kicker">北欧手绘陪伴交互演示</p>
+                <p class="hero-kicker">多模态虚拟陪伴交互系统</p>
                 <h1>情智兼备的虚拟陪伴生成系统</h1>
                 <p class="subtitle">像一本温柔的绘本那样，让识别、交流和回应自然发生。你可以先在交互模块里录音或打开摄像头，再到回应模块里查看虚拟形象、情绪变化与陪伴式回答。</p>
 
@@ -129,6 +141,8 @@
                         <div class="avatar-stage sketch-card">
                             <div class="avatar-aura aura-one"></div>
                             <div class="avatar-aura aura-two"></div>
+                            <div class="talkinghead-stage" id="talkingHeadStage" aria-label="3D虚拟陪伴形象"></div>
+                            <div class="avatar-loading" id="avatarLoading">3D形象加载中...</div>
                             <div class="avatar-placeholder calm" id="avatarDisplay">
                                 <div class="avatar-face">
                                     <div class="eye left-eye"></div>
@@ -208,7 +222,7 @@
         <footer class="footer">
             <div class="info-item">
                 <span class="info-label">运行状态</span>
-                <span class="info-value">前端演示界面已加载</span>
+                <span class="info-value">前端交互界面已加载</span>
             </div>
             <div class="info-item">
                 <span class="info-label">接口连接</span>
@@ -217,10 +231,11 @@
         </footer>
     </div>
 
-    <script src="static/js/api.js"></script>
-    <script src="static/js/recorder.js"></script>
-    <script src="static/js/ui.js"></script>
-    <script src="static/js/avatar.js"></script>
-    <script src="static/js/app.js"></script>
+    <script src="static/js/api.js?v=3d1"></script>
+    <script src="static/js/realtime.js?v=3d1"></script>
+    <script src="static/js/recorder.js?v=3d1"></script>
+    <script src="static/js/ui.js?v=3d1"></script>
+    <script src="static/js/avatar.js?v=3d3"></script>
+    <script src="static/js/app.js?v=3d3"></script>
 </body>
 </html>

@@ -1,6 +1,7 @@
 from flask import Flask
 from flask_cors import CORS
 
+from .api.routes.conversation import conversation_bp
 from .api.routes.dialogue import dialogue_bp
 from .api.routes.emotion import emotion_bp
 from .api.routes.health import health_bp
@@ -25,6 +26,7 @@ def create_app() -> Flask:
     app.register_blueprint(speech_bp)
     app.register_blueprint(emotion_bp)
     app.register_blueprint(dialogue_bp)
+    app.register_blueprint(conversation_bp)
     app.register_blueprint(tts_bp)
 
     return app

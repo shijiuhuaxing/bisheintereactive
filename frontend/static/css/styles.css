@@ -551,6 +551,64 @@ label,
     transform: translateY(-4px);
 }
 
+.talkinghead-stage {
+    position: absolute;
+    inset: 18px;
+    z-index: 2;
+    display: none;
+    overflow: hidden;
+    border-radius: 32px;
+    background: radial-gradient(circle at top, rgba(255, 255, 255, 0.7), rgba(229, 250, 240, 0.28));
+}
+
+.talkinghead-stage.ready {
+    display: block;
+}
+
+.talkinghead-stage canvas {
+    width: 100% !important;
+    height: 100% !important;
+}
+
+.avatar-loading {
+    position: absolute;
+    z-index: 3;
+    left: 50%;
+    bottom: 24px;
+    transform: translateX(-50%);
+    padding: 8px 14px;
+    border-radius: 999px;
+    border: 1px solid rgba(105, 179, 138, 0.28);
+    background: rgba(255, 255, 255, 0.82);
+    color: var(--green-deep);
+    font-size: 0.82rem;
+    font-weight: 700;
+    box-shadow: var(--shadow-sm);
+    transition: opacity var(--transition), transform var(--transition);
+}
+
+.avatar-stage.has-3d .avatar-loading,
+.avatar-stage.avatar-load-failed .avatar-loading {
+    opacity: 0;
+    transform: translateX(-50%) translateY(8px);
+    pointer-events: none;
+}
+
+.avatar-stage.has-3d .avatar-placeholder {
+    opacity: 0;
+    pointer-events: none;
+    transform: scale(0.96);
+}
+
+.avatar-placeholder.avatar-ready {
+    isolation: isolate;
+}
+
+.avatar-placeholder.speaking {
+    transform: translateY(-3px) scale(1.015);
+    box-shadow: 0 22px 44px rgba(155, 192, 173, 0.24), inset 0 0 34px rgba(255, 255, 255, 0.5);
+}
+
 .avatar-face {
     position: relative;
     width: 208px;
@@ -592,6 +650,10 @@ label,
     border-top: 0;
     border-radius: 0 0 70px 70px;
     transition: all var(--transition);
+}
+
+.avatar-placeholder.speaking .mouth {
+    transition: width 48ms linear, height 48ms linear, border-radius 80ms ease;
 }
 
 .avatar-placeholder.happy {
@@ -791,7 +853,7 @@ label,
         height: 132px;
     }
 
-    .avatar-placeholder {
+.avatar-placeholder {
         width: min(278px, 100%);
     }
 
